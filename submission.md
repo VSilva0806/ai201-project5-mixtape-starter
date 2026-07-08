@@ -1,3 +1,7 @@
+### AI Usage
+I mainly used Claude to generate synthetic user/playlist/event objects for reproducing each bug (e.g. friends with playlists, songs with specific listened_at timestamps) and to diagnose isolated functions once I had narrowed down where the bug likely lived, such as asking it to explain why update_listening_streak had a day-of-week check that wasn't in the spec. Claude's explanation of that streak bug was accurate and matched the spec once I checked it, but for the notification and playlist bugs I had to trace the actual code paths myself (comparing add_to_playlist against rate_song, and reading the slice in get_playlist_songs) since Claude's help was limited to setting up test data rather than spotting the missing create_notification call or the songs[:-1] slice on its own. In every case I verified the fix myself by rerunning the relevant pytest file plus the full suite rather than trusting the AI's explanation alone.
+
+
 ### Codebase Map
 models.py defines 5 SQLAlchemy models: User, Tag, Song, ListeningEvent, Rating, Playlist, and Notification. The ListeningEvent model logs a single play of a song by a user
 
