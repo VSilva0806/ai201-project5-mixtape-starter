@@ -21,3 +21,12 @@ Issue #2: Friends Listening Now shows people from yesterday{
 
 
 }
+
+Issue #4: I got notified when a friend added my song to a playlist but not when they rated it{
+    Reproduction: I asked Claude AI to generate two friend user objects, alice and bob, where alice shared a song and bob had a playlist. I had bob add alice's song to his playlist, then had bob rate that same song a score of 5. I ran the get_notifications function located in notification_service.py for alice and found only one notification, of type song_added_to_playlist, confirming that bob rating the song never generated a corresponding notification for alice. 
+
+    Root Cause: After reproducing the issue, I hypothesized that the bug was present in notification_service.py. I opened the file and compared the add_to_playlist function against the rate_song function. add_to_playlist ends by calling create_notification for the song's original sharer whenever song.shared_by != added_by_user_id, which is what generates the "added to playlist" alert. rate_song, however, saves the Rating row and commits, but never calls create_notification anywhere in the function. The function simply does not contain the code path needed to alert the song's sharer that a rating occurred, so no notification is ever queued for that event.
+
+    Fix: To fix the issue, I added a call to create_notification at the end of rate_song, mirroring the same guard used in add_to_playlist: if song.shared_by != user_id, notify the song's sharer with a body message that includes the rater's username, the song title, and the score given. This matches the existing pattern rather than introducing a new one, and reuses the song and rater objects that rate_song already fetches earlier in the function. To verify the fix, I reran the reproduction test in tests/test_notifications.py, where alice shares a song, bob adds it to his playlist, and bob rates it, and confirmed get_notifications now returned both a song_added_to_playlist notification and a song_rated notification for alice. I also ran the full test suite to confirm this change did not affect any other passing tests.
+
+}
