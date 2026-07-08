@@ -71,6 +71,43 @@ def test_playlist_returns_songs_in_order(app, seed_playlist):
         assert titles == ["Track 1", "Track 2", "Track 3", "Track 4", "Track 5"]
 
 
+def test_single_song_playlist_returns_that_song(app):
+    """
+    A playlist with exactly one song should return that song.
+
+    Regression test: get_playlist_songs used to slice off the last
+    song with songs[:-1], which silently turned a 1-song playlist
+    into an empty list — indistinguishable from a truly empty
+    playlist unless this exact case is checked.
+    """
+    with app.app_context():
+        user = User(username="soloist", email="soloist@example.com")
+        db.session.add(user)
+        db.session.flush()
+
+        song = Song(title="Only Track", artist="Solo Artist", shared_by=user.id)
+        db.session.add(song)
+        db.session.flush()
+
+        playlist = Playlist(name="Solo Playlist", created_by=user.id)
+        db.session.add(playlist)
+        db.session.flush()
+
+        db.session.execute(
+            playlist_entries.insert().values(
+                playlist_id=playlist.id,
+                song_id=song.id,
+                position=1,
+                added_by=user.id,
+            )
+        )
+        db.session.commit()
+
+        songs = get_playlist_songs(playlist.id)
+        assert len(songs) == 1
+        assert songs[0]["title"] == "Only Track"
+
+
 def test_empty_playlist_returns_empty_list(app):
     """An empty playlist should return an empty list without error."""
     with app.app_context():
